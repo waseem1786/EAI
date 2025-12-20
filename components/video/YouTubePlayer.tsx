@@ -151,6 +151,28 @@ export function YouTubePlayer({
     return () => destroy();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoId]);
+  // If startSeconds updates after the player is mounted (e.g., progress arrives async),
+  // seek once when we're ready/paused and the delta is meaningful.
+  const lastAppliedStartRef = useRef<number>(-1);
+  useEffect(() => {
+    const p = playerRef.current;
+    if (!p || typeof p.seekTo !== "function") return;
+    const desired = Math.max(0, Number(startSeconds || 0));
+    if (desired <= 0) return;
+
+    // avoid spamming seek
+    if (Math.abs(desired - (lastAppliedStartRef.current < 0 ? 0 : lastAppliedStartRef.current)) < 2) return;
+
+    try {
+      const cur = Number(p.getCurrentTime?.() || 0);
+      // Only seek if we're near the beginning or clearly not at the desired point
+      if (cur < 2 || Math.abs(cur - desired) > 3) {
+        p.seekTo(desired, true);
+        lastAppliedStartRef.current = desired;
+      }
+    } catch {}
+  }, [startSeconds]);
+
 
   return (
     <div className="playerShell" style={{ width: "100%", aspectRatio: "16 / 9" }}>

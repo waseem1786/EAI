@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { TASKS } from "../../lib/tasks";
 import { Toast } from "../ui/Toast";
@@ -17,6 +18,15 @@ async function fetchJson<T>(url:string):Promise<T>{
 }
 
 export function TimelineView(){
+  const router = useRouter();
+  const openTask = (videoId: string, seconds?: number) => {
+    const t = TASKS.find(x => x.videoId === videoId);
+    if (!t) { setToast('Task not found for this video'); return; }
+    const q = new URLSearchParams({ taskId: t.id });
+    if (typeof seconds === 'number' && !Number.isNaN(seconds)) q.set('seek', String(Math.floor(seconds)));
+    router.push(`/tasks?${q.toString()}`);
+  };
+
   const [events,setEvents]=useState<EventItem[]>([]);
   const [progressMap,setProgressMap]=useState<Record<string,Progress>>({});
   const [toast,setToast]=useState<string|null>(null);
@@ -72,8 +82,8 @@ export function TimelineView(){
 
   const toggle=(k:string)=>setOpen(m=>({...m,[k]:!m[k]}));
 
-  const onNodeSeek=(seconds:number)=>{
-    setToast(`Go to Tasks and seek to ${fmt(seconds)} using the segments bar.`);
+  const onNodeSeek=(videoId:string, seconds:number)=>{
+    openTask(videoId, seconds);
   };
 
   return (
@@ -81,7 +91,10 @@ export function TimelineView(){
       <Toast message={toast} />
       <motion.div className="card" initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{duration:0.45}}>
         <div className="cardInner">
-          <h1 className="h1">Timeline</h1>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+            <h1 className="h1">Timeline</h1>
+            <button className="btn btnGhost" onClick={async ()=>{ try{ await fetch("/api/events",{method:"DELETE"}); const j=await fetchJson<{events:EventItem[]}>("/api/events?limit=500"); setEvents(j.events||[]); setToast("Timeline cleared"); }catch(e:any){ setToast(e?.message||"Failed to clear"); } }}>Clear</button>
+          </div>
           <p className="p">Graphical segments per lesson + expandable tree view grouped by Date → Video → Session → Events.</p>
         </div>
       </motion.div>
@@ -111,7 +124,7 @@ export function TimelineView(){
                         <span key={i} className="segment"
                           style={{left:`${left}%`,width:`${width}%`,cursor:"pointer"}}
                           title={`${fmt(seg.start)} → ${fmt(seg.end)}`}
-                          onClick={()=>onNodeSeek(seg.start)}
+                          onClick={()=>onNodeSeek(p.videoId, seg.start)}
                         />
                       );
                     })}
@@ -170,7 +183,7 @@ export function TimelineView(){
                                                   <div className="treeTitle">{e.type}</div>
                                                   <div className="treeMeta">{stamp}{seg?` · ${fmt(seg.start)} → ${fmt(seg.end)}`:""}</div>
                                                 </div>
-                                                {seg && <button className="treeBtn" onClick={()=>onNodeSeek(seg.start)}>Seek {fmt(seg.start)}</button>}
+                                                {seg && <button className="treeBtn" onClick={()=>onNodeSeek(p.videoId, seg.start)}>Seek {fmt(seg.start)}</button>}
                                               </div>
                                             </div>
                                           );

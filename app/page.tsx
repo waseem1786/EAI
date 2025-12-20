@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { TASKS } from "../lib/tasks";
 import { useAuth } from "../components/auth/AuthContext";
@@ -20,6 +21,10 @@ async function getAllProgressFromAPI(): Promise<Record<string, Progress>> {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const goTask = (taskId: string) => router.push(`/tasks?taskId=${encodeURIComponent(taskId)}`);
+  const goStatus = (status: string) => router.push(`/tasks?status=${encodeURIComponent(status)}`);
+
   const { user, loading } = useAuth();
   const [progressMap, setProgressMap] = useState<Record<string, Progress>>({});
 
@@ -107,7 +112,7 @@ export default function DashboardPage() {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="minutes" fill="#8b5cf6" radius={[8,8,0,0]} />
+                <Bar dataKey="minutes" fill="#8b5cf6" radius={[8,8,0,0]} onClick={(d:any) => { const tid = d?.payload?.name; if (tid) goTask(String(tid)); }} />
               </BarChart>
             </ResponsiveContainer>
           </div>

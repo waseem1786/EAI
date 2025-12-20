@@ -28,10 +28,11 @@ async function apiJson<T>(url: string, init?: RequestInit): Promise<{ ok: boolea
   }
 }
 
-export function TaskBoard() {
+export function TaskBoard({ initialTaskId, initialStatus, initialSeekSeconds }: { initialTaskId?: string; initialStatus?: string; initialSeekSeconds?: number }) {
   const { user } = useAuth();
   const [toast, setToast] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "todo" | "in-progress" | "done">("all");
+  const initialFilter: "all" | "todo" | "in-progress" | "done" = initialStatus === "todo" ? "todo" : initialStatus === "doing" ? "in-progress" : initialStatus === "done" ? "done" : "all";
+  const [filter, setFilter] = useState<"all" | "todo" | "in-progress" | "done">(initialFilter);
   const [playingTaskId, setPlayingTaskId] = useState<string | null>(null);
   const [progressByVideo, setProgressByVideo] = useState<Record<string, Progress>>({});
   const [playerState, setPlayerState] = useState<PlayerState>("idle");
@@ -107,6 +108,15 @@ export function TaskBoard() {
     await postEvent(task, "play_opened");
   };
 
+  useEffect(() => {
+    if (!initialTaskId) return;
+    const exists = TASKS.some((t) => t.id === initialTaskId);
+    if (!exists) return;
+    // Start playing once on first mount / when param changes
+    startPlayTask(initialTaskId).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTaskId]);
+
   const statusOf = (task: Task) => {
     const p = progressByVideo[task.videoId];
     const pct = p?.durationSeconds ? (p.lastPositionSeconds / p.durationSeconds) : 0;
@@ -174,6 +184,18 @@ export function TaskBoard() {
     seekFnRef.current(seekTo);
     setToast(`Seeking to ${fmt(seekTo)}`);
   };
+
+  useEffect(() => {
+    if (!initialSeekSeconds || !initialTaskId) return;
+    if (!seekFnRef.current) return;
+    // Only seek if the requested task is currently playing
+    if (playingTaskId !== initialTaskId) return;
+    try {
+      seekFnRef.current(Math.max(0, initialSeekSeconds));
+      setToast(`Seeking to ${fmt(initialSeekSeconds)}`);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSeekSeconds, initialTaskId, playingTaskId]);
 
   useEffect(() => {
     // prime local progress so tasks show instantly

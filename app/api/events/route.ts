@@ -32,3 +32,14 @@ export async function POST(req: Request) {
   const created = await TimelineEvent.create({ userId: session.sub, videoId, taskId, type, data });
   return NextResponse.json({ event: created });
 }
+
+
+export async function DELETE() {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  if (!hasMongoConfigured()) return NextResponse.json({ message: "MongoDB not configured" }, { status: 503 });
+
+  await dbConnect();
+  await TimelineEvent.deleteMany({ userId: session.sub });
+  return NextResponse.json({ ok: true });
+}

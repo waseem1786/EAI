@@ -2,11 +2,14 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 type User = { id: string; email: string };
+
+type AuthResult = { ok: boolean; message?: string };
+
 type AuthCtx = {
   user: User | null;
   loading: boolean;
-  register: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
-  login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
+  register: (email: string, password: string) => Promise<AuthResult>;
+  login: (email: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
 };
 
@@ -14,9 +17,16 @@ const Ctx = createContext<AuthCtx | null>(null);
 
 async function jsonFetch<T>(url: string, init?: RequestInit): Promise<{ ok: boolean; data?: T; message?: string }> {
   try {
-    const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers || {}) } });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, message: body?.message || "Request failed" };
+    const res = await fetch(url, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers || {}),
+      },
+    });
+
+    const body = await res.json().catch(() => ({} as any));
+    if (!res.ok) return { ok: false, message: (body as any)?.message || `Request failed (${res.status})` };
     return { ok: true, data: body as T };
   } catch (e: any) {
     return { ok: false, message: e?.message || "Network error" };
@@ -27,24 +37,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refresh = async () => {
-    setLoading(true);
-    const r = await jsonFetch<{ user: User | null }>("/api/me", { method: "GET" });
-    setUser(r.ok ? (r.data?.user || null) : null);
-    setLoading(false);
-  };
-
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const r = await jsonFetch<{ user: User | null }>("/api/me", { method: "GET" });
+      if (!alive) return;
+      setUser(r.ok ? r.data!.user : null);
+      setLoading(false);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const register = async (email: string, password: string) => {
-    const r = await jsonFetch<{ user: User }>("/api/auth/register", { method: "POST", body: JSON.stringify({ email, password }) });
+    const r = await jsonFetch<{ user: User }>("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
     if (!r.ok) return { ok: false, message: r.message };
     setUser(r.data!.user);
     return { ok: true };
   };
 
   const login = async (email: string, password: string) => {
-    const r = await jsonFetch<{ user: User }>("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+    const r = await jsonFetch<{ user: User }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
     if (!r.ok) return { ok: false, message: r.message };
     setUser(r.data!.user);
     return { ok: true };
