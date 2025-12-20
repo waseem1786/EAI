@@ -1,74 +1,117 @@
+"use client";
+import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { TASKS } from "../lib/tasks";
+import { useAuth } from "../components/auth/AuthContext";
+import { ResponsiveContainer, PieChart, Pie, Tooltip, Cell, BarChart, Bar, XAxis, YAxis } from "recharts";
+import { loadLocalProgress } from "../lib/local_fallback";
 
-import { tasks } from "../lib/data";
-import { ChartsSection } from "../components/Charts";
+type Progress = { videoId: string; watchedSecondsTotal: number; durationSeconds: number; lastPositionSeconds: number };
+
+async function getAllProgressFromAPI(): Promise<Record<string, Progress>> {
+  const map: Record<string, Progress> = {};
+  for (const t of TASKS) {
+    const r = await fetch(`/api/progress?videoId=${encodeURIComponent(t.videoId)}`, { cache: "no-store" });
+    if (!r.ok) continue;
+    const j = await r.json().catch(() => ({}));
+    if (j?.progress) map[t.videoId] = j.progress;
+  }
+  return map;
+}
 
 export default function DashboardPage() {
-  const total = tasks.length;
-  const done = tasks.filter((t) => t.status === "done").length;
-  const inProgress = tasks.filter((t) => t.status === "in-progress").length;
-  const completion = total === 0 ? 0 : Math.round((done / total) * 100);
+  const { user, loading } = useAuth();
+  const [progressMap, setProgressMap] = useState<Record<string, Progress>>({});
+
+  useEffect(() => {
+    const load = async () => {
+      if (user) {
+        const m = await getAllProgressFromAPI();
+        setProgressMap(m);
+      } else {
+        const m: Record<string, Progress> = {};
+        for (const t of TASKS) {
+          const p = loadLocalProgress(t.videoId);
+          if (p) m[t.videoId] = p as any;
+        }
+        setProgressMap(m);
+      }
+    };
+    load().catch(() => {});
+  }, [user]);
+
+  const stats = useMemo(() => {
+    const total = TASKS.length;
+    let watched = 0, done = 0, inProgress = 0;
+    for (const t of TASKS) {
+      const p = progressMap[t.videoId];
+      if (p?.watchedSecondsTotal) watched += p.watchedSecondsTotal;
+      const pct = p?.durationSeconds ? (p.lastPositionSeconds / p.durationSeconds) : 0;
+      if (pct >= 0.9) done++;
+      else if ((p?.lastPositionSeconds || 0) > 0) inProgress++;
+    }
+    const todo = total - done - inProgress;
+    return { total, done, inProgress, todo, watchedMin: Math.round(watched / 60) };
+  }, [progressMap]);
+
+  const pie = [{ name: "To Do", value: stats.todo }, { name: "In Progress", value: stats.inProgress }, { name: "Done", value: stats.done }];
+  const colors = ["#06b6d4", "#f59e0b", "#16a34a"];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Dashboard
-          </h1>
-          <p className="mt-1 text-sm text-slate-300">
-            Visual overview of your AI learning playlist, task progress and timeline.
-          </p>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <motion.div className="card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
+        <div className="cardInner" style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <h1 className="h1">Dashboard</h1>
+            <p className="p">World-class UI. Click-to-play, resume, watch-time tracking, segments, and timeline tree view.</p>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+            {loading ? (
+              <span className="pill">Loading…</span>
+            ) : user ? (
+              <span className="badge">Signed in as <b>{user.email}</b></span>
+            ) : (
+              <span className="badge">Not signed in — tracking is saved locally in this browser.</span>
+            )}
+          </div>
         </div>
-        <div className="flex gap-2 text-[11px] text-slate-400">
-          <span className="badge">4-week plan</span>
-          <span className="badge">28 tasks</span>
-        </div>
+      </motion.div>
+
+      <div className="grid3">
+        <div className="card cardSoft"><div className="cardInner"><div className="h2">Lessons</div><div style={{ fontSize: 28, fontWeight: 950, letterSpacing: "-0.03em" }}>{stats.total}</div><div className="small">AI learning tasks</div></div></div>
+        <div className="card cardSoft"><div className="cardInner"><div className="h2">Watched</div><div style={{ fontSize: 28, fontWeight: 950, letterSpacing: "-0.03em" }}>{stats.watchedMin}m</div><div className="small">Counted only while playing</div></div></div>
+        <div className="card cardSoft"><div className="cardInner"><div className="h2">Completed</div><div style={{ fontSize: 28, fontWeight: 950, letterSpacing: "-0.03em" }}>{stats.done}</div><div className="small">Auto at ~90%</div></div></div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="glass rounded-2xl p-4 shadow-soft-glow">
-          <h2 className="text-sm text-slate-300">Total tasks</h2>
-          <p className="mt-1 text-2xl font-semibold">{total}</p>
-          <p className="text-[11px] text-slate-400 mt-1">
-            Every item is 1 step in your AI roadmap.
-          </p>
-        </div>
-        <div className="glass rounded-2xl p-4">
-          <h2 className="text-sm text-slate-300">Completed</h2>
-          <p className="mt-1 text-2xl font-semibold">{done}</p>
-          <p className="text-[11px] text-slate-400 mt-1">
-            Mark tasks as <span className="text-sky-300">Done</span> from the Tasks page.
-          </p>
-        </div>
-        <div className="glass rounded-2xl p-4">
-          <h2 className="text-sm text-slate-300">In progress</h2>
-          <p className="mt-1 text-2xl font-semibold">{inProgress}</p>
-          <p className="text-[11px] text-slate-400 mt-1">
-            Automatically updated when you play tutorials in the app.
-          </p>
-        </div>
-      </div>
-
-      <ChartsSection />
-
-      <div className="grid gap-4 md:grid-cols-2 mt-4">
-        <div className="glass rounded-2xl p-4">
-          <h3 className="text-sm font-semibold mb-1">How to use</h3>
-          <p className="text-sm text-slate-300">
-            Go to <a href="/tasks" className="text-sky-400">Tasks</a> and start from Week 1,
-            Day 1. Each task has a tutorial link. You can play it directly inside
-            the app or open it in YouTube. Status is automatically set to{" "}
-            <span className="text-sky-300">In Progress</span> when you start playing.
-          </p>
-        </div>
-        <div className="glass rounded-2xl p-4">
-          <h3 className="text-sm font-semibold mb-1">Timeline</h3>
-          <p className="text-sm text-slate-300">
-            <a href="/timeline" className="text-sky-400">Timeline</a> shows a graphical,
-            Facebook-style vertical feed of your key achievements: finishing Python,
-            training your first ML model, understanding transformers, and more.
-          </p>
-        </div>
+      <div className="grid2">
+        <div className="card"><div className="cardInner">
+          <div className="h2">Progress distribution</div>
+          <div className="small">Updates automatically.</div>
+          <div style={{ height: 260, marginTop: 12 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={pie} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2}>
+                  {pie.map((_, i) => <Cell key={i} fill={colors[i]} />)}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div></div>
+        <div className="card"><div className="cardInner">
+          <div className="h2">Watch minutes per lesson</div>
+          <div className="small">Per user when logged in. Local fallback otherwise.</div>
+          <div style={{ height: 260, marginTop: 12 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={TASKS.map(t => ({ name: t.id, minutes: Math.round((progressMap[t.videoId]?.watchedSecondsTotal || 0)/60) }))}>
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="minutes" fill="#8b5cf6" radius={[8,8,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div></div>
       </div>
     </div>
   );
