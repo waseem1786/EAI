@@ -1,14 +1,21 @@
 "use client";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { TaskGridItem } from "./TaskGridItem";
+import { TaskGanttItem } from "./TaskGanttItem";
+import { KanbanBoard } from "./KanbanBoard";
+import { DropResult } from "react-beautiful-dnd";
+import { VideoModal } from "./VideoModal";
+import { TaskSkeleton } from "./TaskSkeleton";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { TASKS, Task } from "../../lib/tasks";
-import { YouTubePlayer, PlayerState } from "../video/YouTubePlayer";
+import { type Task } from "../../lib/tasks";
+import { PlayerState } from "../video/YouTubePlayer";
 import { Toast } from "../ui/Toast";
 import { useAuth } from "../auth/AuthContext";
 import { loadLocalProgress, saveLocalProgress } from "../../lib/local_fallback";
 
 type Segment = { start: number; end: number };
 type Progress = { videoId: string; lastPositionSeconds: number; watchedSecondsTotal: number; durationSeconds: number; segments: Segment[] };
+type ViewMode = "board" | "grid" | "gantt";
 
 function fmt(sec: number) {
   const s = Math.max(0, Math.floor(sec));
@@ -33,9 +40,12 @@ export function TaskBoard({ initialTaskId, initialStatus, initialSeekSeconds }: 
   const [toast, setToast] = useState<string | null>(null);
   const initialFilter: "all" | "todo" | "in-progress" | "done" = initialStatus === "todo" ? "todo" : initialStatus === "doing" ? "in-progress" : initialStatus === "done" ? "done" : "all";
   const [filter, setFilter] = useState<"all" | "todo" | "in-progress" | "done">(initialFilter);
+  const [viewMode, setViewMode] = useState<ViewMode>("board");
   const [playingTaskId, setPlayingTaskId] = useState<string | null>(null);
   const [progressByVideo, setProgressByVideo] = useState<Record<string, Progress>>({});
   const [playerState, setPlayerState] = useState<PlayerState>("idle");
+  const [isLoading, setIsLoading] = useState(true);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   const seekFnRef = useRef<((s: number) => void) | null>(null);
   const sessionStartRef = useRef<number | null>(null);
@@ -47,18 +57,16 @@ export function TaskBoard({ initialTaskId, initialStatus, initialSeekSeconds }: 
   }, [toast]);
 
   const loadProgress = async (videoId: string) => {
-    // If not logged in -> local
     if (!user) {
       const local = loadLocalProgress(videoId);
       if (local) setProgressByVideo((m) => ({ ...m, [videoId]: local as any }));
       return local as any as Progress | null;
     }
-
     const r = await apiJson<{ progress: Progress | null }>(`/api/progress?videoId=${encodeURIComponent(videoId)}`, { method: "GET", cache: "no-store" as any });
     if (!r.ok) {
       const local = loadLocalProgress(videoId);
       if (local) setProgressByVideo((m) => ({ ...m, [videoId]: local as any }));
-      if (r.status === 503) setToast("MongoDB is not configured. Progress is saved locally.");
+      if (r.status === 503) setToast("MongoDB not configured. Saving locally.");
       return local as any as Progress | null;
     }
     const p = r.data?.progress || null;
@@ -78,12 +86,10 @@ export function TaskBoard({ initialTaskId, initialStatus, initialSeekSeconds }: 
       setProgressByVideo((m) => ({ ...m, [videoId]: next as any }));
       return;
     }
-
     const r = await apiJson<{ progress: Progress }>("/api/progress", { method: "POST", body: JSON.stringify({ videoId, ...payload }) });
     if (r.ok && r.data?.progress) setProgressByVideo((m) => ({ ...m, [videoId]: r.data!.progress }));
     if (!r.ok && r.status === 503) {
-      // fallback to local
-      setToast("MongoDB not configured. Saving progress locally.");
+      setToast("MongoDB not configured. Saving locally.");
       const cur = loadLocalProgress(videoId) || { videoId, lastPositionSeconds: 0, watchedSecondsTotal: 0, durationSeconds: 0, segments: [], updatedAt: Date.now() };
       const next = saveLocalProgress(videoId, {
         lastPositionSeconds: payload.lastPositionSeconds,
@@ -96,45 +102,59 @@ export function TaskBoard({ initialTaskId, initialStatus, initialSeekSeconds }: 
   };
 
   const postEvent = async (task: Task, type: string, data?: any) => {
-    if (!user) return; // local-only mode
-    const r = await apiJson("/api/events", { method: "POST", body: JSON.stringify({ taskId: task.id, videoId: task.videoId, type, data }) });
-    if (!r.ok && r.status === 503) setToast("MongoDB not configured. Events are not saved server-side.");
+    if (!user) return;
+    await apiJson("/api/events", { method: "POST", body: JSON.stringify({ taskId: task.id, videoId: task.videoId, type, data }) });
   };
 
   const startPlayTask = async (taskId: string) => {
-    const task = TASKS.find((t) => t.id === taskId)!;
+    const task = tasks.find((t) => t.id === taskId)!;
     await loadProgress(task.videoId);
     setPlayingTaskId(taskId);
     await postEvent(task, "play_opened");
   };
 
   useEffect(() => {
-    if (!initialTaskId) return;
-    const exists = TASKS.some((t) => t.id === initialTaskId);
+    if (!initialTaskId || tasks.length === 0) return;
+    const exists = tasks.some((t) => t.id === initialTaskId);
     if (!exists) return;
-    // Start playing once on first mount / when param changes
     startPlayTask(initialTaskId).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialTaskId]);
-
-  const statusOf = (task: Task) => {
-    const p = progressByVideo[task.videoId];
-    const pct = p?.durationSeconds ? (p.lastPositionSeconds / p.durationSeconds) : 0;
-    if (pct >= 0.9) return "done";
-    if ((p?.lastPositionSeconds || 0) > 0) return "in-progress";
-    return "todo";
-  };
+  }, [initialTaskId, tasks]);
 
   const visibleTasks = useMemo(() => {
-    const all = TASKS.map((t) => {
+    const all = tasks.map((t) => {
       const p = progressByVideo[t.videoId];
       const pct = p?.durationSeconds ? Math.min(100, Math.round((p.lastPositionSeconds / p.durationSeconds) * 100)) : 0;
-      return { ...t, pct, watched: p?.watchedSecondsTotal || 0, status: statusOf(t), duration: p?.durationSeconds || 0 };
+      return { ...t, pct, watched: p?.watchedSecondsTotal || 0, duration: p?.durationSeconds || 0 };
     });
+    if (viewMode === 'board') return all;
     return filter === "all" ? all : all.filter((t) => t.status === filter);
-  }, [progressByVideo, filter]);
+  }, [progressByVideo, filter, tasks, viewMode]);
 
-  const playingTask = playingTaskId ? TASKS.find((t) => t.id === playingTaskId)! : null;
+  const playingTask = playingTaskId ? tasks.find((t) => t.id === playingTaskId)! : null;
+
+  const onPlayerState = async (s: PlayerState) => {
+    setPlayerState(s);
+    if (!playingTask) return;
+    if (s === "playing") {
+      const last = progressByVideo[playingTask.videoId]?.lastPositionSeconds || 0;
+      sessionStartRef.current = last;
+      await postEvent(playingTask, "playing");
+    }
+    if (s === "paused" || s === "ended") {
+      const endAt = progressByVideo[playingTask.videoId]?.lastPositionSeconds || 0;
+      await closeSegmentIfOpen(playingTask, endAt);
+      await postEvent(playingTask, s);
+    }
+  };
+
+  const onTick = async (p: { seconds: number; duration: number; deltaWatched: number }) => {
+    if (!playingTask) return;
+    if (Math.abs(p.seconds - lastTickRef.current) < 0.9) return;
+    lastTickRef.current = p.seconds;
+    await postProgress(playingTask.videoId, { lastPositionSeconds: p.seconds, watchedSecondsDelta: p.deltaWatched, durationSeconds: p.duration });
+    if (p.duration > 0 && p.seconds / p.duration >= 0.9) await postEvent(playingTask, "auto_done");
+  };
 
   const closeSegmentIfOpen = async (task: Task, endAt: number) => {
     if (sessionStartRef.current === null) return;
@@ -147,49 +167,8 @@ export function TaskBoard({ initialTaskId, initialStatus, initialSeekSeconds }: 
     }
   };
 
-  const onPlayerState = async (s: PlayerState) => {
-    setPlayerState(s);
-    if (!playingTask) return;
-
-    if (s === "playing") {
-      const last = progressByVideo[playingTask.videoId]?.lastPositionSeconds || 0;
-      sessionStartRef.current = last;
-      await postEvent(playingTask, "playing");
-    }
-
-    if (s === "paused" || s === "ended") {
-      const endAt = progressByVideo[playingTask.videoId]?.lastPositionSeconds || 0;
-      await closeSegmentIfOpen(playingTask, endAt);
-      await postEvent(playingTask, s);
-    }
-  };
-
-  const onTick = async (p: { seconds: number; duration: number; deltaWatched: number }) => {
-    if (!playingTask) return;
-
-    // Avoid heavy writes (only if time actually moved)
-    if (Math.abs(p.seconds - lastTickRef.current) < 0.9) return;
-    lastTickRef.current = p.seconds;
-
-    await postProgress(playingTask.videoId, { lastPositionSeconds: p.seconds, watchedSecondsDelta: p.deltaWatched, durationSeconds: p.duration });
-
-    if (p.duration > 0 && p.seconds / p.duration >= 0.9) {
-      await postEvent(playingTask, "auto_done");
-    }
-  };
-
-  const onClickSegment = (seg: Segment, duration: number) => {
-    if (!seekFnRef.current) return;
-    const seekTo = Math.max(0, Math.min(duration || seg.end, seg.start));
-    seekFnRef.current(seekTo);
-    setToast(`Seeking to ${fmt(seekTo)}`);
-  };
-
   useEffect(() => {
-    if (!initialSeekSeconds || !initialTaskId) return;
-    if (!seekFnRef.current) return;
-    // Only seek if the requested task is currently playing
-    if (playingTaskId !== initialTaskId) return;
+    if (!initialSeekSeconds || !initialTaskId || !seekFnRef.current || playingTaskId !== initialTaskId) return;
     try {
       seekFnRef.current(Math.max(0, initialSeekSeconds));
       setToast(`Seeking to ${fmt(initialSeekSeconds)}`);
@@ -198,15 +177,36 @@ export function TaskBoard({ initialTaskId, initialStatus, initialSeekSeconds }: 
   }, [initialSeekSeconds, initialTaskId, playingTaskId]);
 
   useEffect(() => {
-    // prime local progress so tasks show instantly
-    const map: Record<string, Progress> = {};
-    for (const t of TASKS) {
-      const p = loadLocalProgress(t.videoId);
-      if (p) map[t.videoId] = p as any;
+    async function fetchData() {
+      setIsLoading(true);
+      const res = await apiJson<{ tasks: Task[] }>("/api/tasks");
+      if (res.ok && res.data?.tasks) {
+        const fetchedTasks = res.data.tasks;
+        setTasks(fetchedTasks);
+        const map: Record<string, Progress> = {};
+        for (const t of fetchedTasks) {
+          const p = loadLocalProgress(t.videoId);
+          if (p) map[t.videoId] = p as any;
+        }
+        setProgressByVideo((m) => ({ ...map, ...m }));
+      }
+      setIsLoading(false);
     }
-    setProgressByVideo((m) => ({ ...map, ...m }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchData();
   }, []);
+
+  const onDragEnd = async (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+
+    const newTasks = Array.from(tasks);
+    const task = newTasks.find(t => t.id === draggableId)!;
+    task.status = destination.droppableId;
+    setTasks(newTasks);
+
+    await apiJson(`/api/task-status`, { method: "POST", body: JSON.stringify({ taskId: draggableId, status: destination.droppableId }) });
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -216,135 +216,96 @@ export function TaskBoard({ initialTaskId, initialStatus, initialSeekSeconds }: 
         <div className="cardInner" style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
             <h1 className="h1">Tasks</h1>
-            <p className="p">Pick a lesson, play inside the app, and your resume position + watch time will update automatically.</p>
+            <p className="p">View as Board, Grid or Gantt. All synced to MongoDB.</p>
           </div>
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <span className="badge">Player: {playerState}</span>
-            {!user && <span className="badge">Local mode (login to sync to MongoDB)</span>}
-            <select className="input" style={{ width: 220 }} value={filter} onChange={(e) => setFilter(e.target.value as any)}>
+            {!user && <span className="badge">Local mode</span>}
+            <select className="input" style={{ width: 140 }} value={filter} onChange={(e) => setFilter(e.target.value as any)}>
               <option value="all">All</option>
               <option value="todo">To Do</option>
               <option value="in-progress">In Progress</option>
               <option value="done">Done</option>
             </select>
+            <div className="btnRow">
+              <button className={`btn ${viewMode === "board" ? "btnPrimary" : "btnGhost"}`} onClick={() => setViewMode("board")}>Board</button>
+              <button className={`btn ${viewMode === "grid" ? "btnPrimary" : "btnGhost"}`} onClick={() => setViewMode("grid")}>Grid</button>
+              <button className={`btn ${viewMode === "gantt" ? "btnPrimary" : "btnGhost"}`} onClick={() => setViewMode("gantt")}>Gantt</button>
+            </div>
           </div>
         </div>
       </motion.div>
 
-      <div className="grid2">
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {visibleTasks.map((t) => (
-            <motion.div key={t.id} className="taskCard" whileHover={{ y: -2 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                <div>
-                  <p className="taskTitle">{t.title}</p>
-                  <div className="taskMeta">Day {t.day} · {t.estimatedMinutes} min · {t.id}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ maxHeight: "calc(100vh - 280px)", overflowY: "auto", paddingRight: 12 }}>
+          <AnimatePresence mode="wait">
+            {isLoading && viewMode === "board" && (
+              <motion.div key="skeleton" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                {[...Array(3)].map((_, i) => <TaskSkeleton key={i} />)}
+              </motion.div>
+            )}
+            {!isLoading && viewMode === "board" && (
+              <KanbanBoard tasks={visibleTasks} onDragEnd={onDragEnd} onPlay={startPlayTask} />
+            )}
+
+            {isLoading && viewMode === "grid" && (
+              <motion.div key="skeleton-grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+                {[...Array(6)].map((_, i) => <div key={i} className="card skeleton" style={{ padding: 12, height: 120 }} />)}
+              </motion.div>
+            )}
+            {!isLoading && viewMode === "grid" && (
+              <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+                {visibleTasks.map((t) => <TaskGridItem key={t.id} task={t} onPlay={startPlayTask} />)}
+                {visibleTasks.length === 0 && <div className="card" style={{ gridColumn: "1 / -1" }}><div className="cardInner">No tasks match your filter.</div></div>}
+              </motion.div>
+            )}
+
+            {isLoading && viewMode === "gantt" && (
+              <motion.div key="skeleton-gantt" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="card">
+                <div className="cardInner">
+                  <div className="h2">Gantt Chart View</div>
+                  <div className="split" />
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} style={{ marginBottom: 14 }}>
+                      <div className="skeleton" style={{ width: "70%", height: 14, marginBottom: 4 }} />
+                      <div className="timelineBar skeleton" style={{ height: 12 }} />
+                    </div>
+                  ))}
                 </div>
-                <span className="badge">{t.status}</span>
-              </div>
-
-              <div className="taskDesc">{t.description}</div>
-              <div className="split" />
-
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                <div style={{ minWidth: 220, flex: 1 }}>
-                  <div className="progressBar" aria-label="Progress bar">
-                    <div className="progressFill" style={{ width: `${t.pct}%` }} />
-                  </div>
-                  <div className="small" style={{ marginTop: 6 }}>
-                    Resume <b>{fmt(progressByVideo[t.videoId]?.lastPositionSeconds || 0)}</b> / {fmt(t.duration)} · Watched <b>{fmt(t.watched)}</b>
-                  </div>
+              </motion.div>
+            )}
+            {!isLoading && viewMode === "gantt" && (
+              <motion.div key="gantt" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="card">
+                <div className="cardInner">
+                  <div className="h2">Gantt Chart View</div>
+                  <div className="split" />
+                  {visibleTasks.map((t) => <TaskGanttItem key={t.id} task={t} onPlay={startPlayTask} />)}
+                  {visibleTasks.length === 0 && <div style={{ marginTop: 8 }}>No tasks match your filter.</div>}
                 </div>
-
-                <div className="btnRow">
-                  <button className="btn btnPrimary" onClick={() => startPlayTask(t.id)}>▶ Play</button>
-                  <a className="btn btnGhost" href={t.url} target="_blank" rel="noreferrer">↗ YouTube</a>
-                </div>
-              </div>
-
-              <div className="split" />
-              <div className="small" style={{ marginBottom: 6 }}>Lesson notes</div>
-              <div className="card cardSoft" style={{ borderRadius: 16 }}>
-                <div className="cardInner" style={{ padding: 12 }}>
-                  <div style={{ fontSize: 13, lineHeight: 1.6, color: "rgba(11,18,32,0.85)" }}>{t.lessonText}</div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {playingTask && (
-            <motion.div className="card cardSoft" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-              <div className="cardInner">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  <div>
-                    <div className="h2">Now playing</div>
-                    <div className="small">{playingTask.title}</div>
-                  </div>
-                  <div className="btnRow">
-                    <a className="btn btnGhost" href={playingTask.url} target="_blank" rel="noreferrer">Open YouTube</a>
-                    <button className="btn btnRose" onClick={async () => {
-                      const endAt = progressByVideo[playingTask.videoId]?.lastPositionSeconds || 0;
-                      await closeSegmentIfOpen(playingTask, endAt);
-                      setPlayingTaskId(null);
-                    }}>Close</button>
-                  </div>
-                </div>
-
-                <div className="split" />
-
-                <YouTubePlayer
-                  videoId={playingTask.videoId}
-                  startSeconds={progressByVideo[playingTask.videoId]?.lastPositionSeconds || 0}
-                  onTick={onTick}
-                  onState={onPlayerState}
-                  onSeekRequest={(seekTo) => { seekFnRef.current = seekTo; }}
-                />
-
-                <div className="split" />
-                <div className="h2">Watched segments</div>
-                <div className="small">Hover to see time range. Click a segment to seek.</div>
-
-                <div style={{ marginTop: 10 }}>
-                  <div className="timelineBar" role="list" aria-label="Watched segments timeline">
-                    {((progressByVideo[playingTask.videoId]?.segments || []) as Segment[]).map((seg, i) => {
-                      const dur = progressByVideo[playingTask.videoId]?.durationSeconds || 0;
-                      const left = dur > 0 ? (seg.start / dur) * 100 : 0;
-                      const width = dur > 0 ? Math.max(0.5, ((seg.end - seg.start) / dur) * 100) : 0;
-                      return (
-                        <span
-                          key={i}
-                          className="segment"
-                          style={{ left: `${left}%`, width: `${width}%`, cursor: "pointer" }}
-                          title={`${fmt(seg.start)} → ${fmt(seg.end)}`}
-                          onClick={() => onClickSegment(seg, dur)}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="split" />
-                <div className="small">
-                  Auto resume is always on. Watch time is counted only while playing; backward seeks are not double-counted.
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {!playingTask && (
-            <div className="card">
-              <div className="cardInner">
-                <div className="h2">Player</div>
-                <div className="small">Choose any task and click “Play”.</div>
-                <div className="split" />
-                <div className="small">Tip: login to sync everything to MongoDB Atlas, then Timeline tree view will be enabled.</div>
-              </div>
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
+
+      {playingTask && (
+        <VideoModal
+          task={playingTask}
+          startSeconds={progressByVideo[playingTask.videoId]?.lastPositionSeconds || 0}
+          onClose={async () => {
+            const endAt = progressByVideo[playingTask.videoId]?.lastPositionSeconds || 0;
+            if (playingTask) {
+              await closeSegmentIfOpen(playingTask, endAt);
+            }
+            setPlayingTaskId(null);
+          }}
+          onTick={onTick}
+          onState={onPlayerState}
+          onSeekRequest={(seekTo: (s: number) => void) => {
+            seekFnRef.current = seekTo;
+          }}
+        />
+      )}
     </div>
   );
 }

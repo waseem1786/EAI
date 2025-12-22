@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "next": "14.2.3",
@@ -15,12 +16,18 @@
     "recharts": "^2.12.7",
     "mongoose": "^8.5.2",
     "bcryptjs": "^2.4.3",
-    "jose": "^5.9.6"
+    "jose": "^5.9.6",
+    "react-beautiful-dnd": "^13.1.1"
   },
   "devDependencies": {
     "typescript": "^5.4.0",
     "@types/node": "^20.11.30",
     "@types/react": "^18.2.66",
-    "@types/react-dom": "^18.2.22"
+    "@types/react-dom": "^18.2.22",
+    "@types/bcryptjs": "^2.4.6",
+    "tsx": "^4.16.2",
+    "dotenv": "^16.4.5",
+    "@types/dotenv": "^8.2.0",
+    "@types/react-beautiful-dnd": "^13.1.8"
   }
 }

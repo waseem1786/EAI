@@ -2,8 +2,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { TASKS } from "../../lib/tasks";
+import { type Task } from "../../lib/tasks";
 import { Toast } from "../ui/Toast";
+import { TimelineSkeleton } from "./TimelineSkeleton";
 
 type EventItem = { _id: string; videoId: string; taskId: string; type: string; data?: any; createdAt: string; };
 type Progress = { videoId: string; watchedSecondsTotal: number; durationSeconds: number; segments: { start:number; end:number }[]; };
@@ -19,37 +20,59 @@ async function fetchJson<T>(url:string):Promise<T>{
 
 export function TimelineView(){
   const router = useRouter();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [events,setEvents]=useState<EventItem[]>([]);
+  const [progressMap,setProgressMap]=useState<Record<string,Progress>>({});
+  const [toast,setToast]=useState<string|null>(null);
+  const [open,setOpen]=useState<Record<string,boolean>>({});
+  const [isLoading, setIsLoading] = useState(true);
+
   const openTask = (videoId: string, seconds?: number) => {
-    const t = TASKS.find(x => x.videoId === videoId);
+    const t = tasks.find(x => x.videoId === videoId);
     if (!t) { setToast('Task not found for this video'); return; }
     const q = new URLSearchParams({ taskId: t.id });
     if (typeof seconds === 'number' && !Number.isNaN(seconds)) q.set('seek', String(Math.floor(seconds)));
     router.push(`/tasks?${q.toString()}`);
   };
 
-  const [events,setEvents]=useState<EventItem[]>([]);
-  const [progressMap,setProgressMap]=useState<Record<string,Progress>>({});
-  const [toast,setToast]=useState<string|null>(null);
-  const [open,setOpen]=useState<Record<string,boolean>>({});
-
-  useEffect(()=>{ fetchJson<{events:EventItem[]}>("/api/events?limit=500").then(j=>setEvents(j.events)).catch((e:any)=>setToast(e?.message||"Failed to load timeline")); },[]);
   useEffect(()=>{
-    const load=async()=>{
-      const map:Record<string,Progress>={};
-      for(const t of TASKS){
-        const j=await fetchJson<{progress:Progress|null}>(`/api/progress?videoId=${encodeURIComponent(t.videoId)}`);
-        if(j.progress) map[t.videoId]=j.progress;
+    async function load() {
+      setIsLoading(true);
+      try {
+        const [evs, ts] = await Promise.all([
+          fetchJson<{events:EventItem[]}>("/api/events?limit=500"),
+          fetchJson<{tasks:Task[]}>("/api/tasks"),
+        ]);
+        setEvents(evs.events);
+        setTasks(ts.tasks);
+
+        const map:Record<string,Progress>={};
+        for(const t of ts.tasks){
+          const j=await fetchJson<{progress:Progress|null}>(`/api/progress?videoId=${encodeURIComponent(t.videoId)}`);
+          if(j.progress) map[t.videoId]=j.progress;
+        }
+        setProgressMap(map);
+      } catch (e: any) {
+        setToast(e?.message || "Failed to load timeline");
       }
-      setProgressMap(map);
-    };
-    load().catch(()=>{});
+      setIsLoading(false);
+    }
+    load();
   },[]);
 
   useEffect(()=>{ const t=window.setTimeout(()=>setToast(null), toast?2600:0); return ()=>window.clearTimeout(t); },[toast]);
 
   const grouped = useMemo(()=>{
     const byDate:Record<string,EventItem[]> = {};
-    for(const e of events){
+    const filteredEvents = events.filter((e, i) => {
+      if (e.type !== 'play_opened') return true;
+      const prev = events[i - 1];
+      if (!prev || prev.type !== 'play_opened' || prev.videoId !== e.videoId) return true;
+      const diff = new Date(e.createdAt).getTime() - new Date(prev.createdAt).getTime();
+      return diff > 1000 * 60 * 5; // 5 minutes
+    });
+
+    for(const e of filteredEvents){
       const key=new Date(e.createdAt).toISOString().slice(0,10);
       (byDate[key] ||= []).push(e);
     }
@@ -86,6 +109,8 @@ export function TimelineView(){
     openTask(videoId, seconds);
   };
 
+  if (isLoading) return <TimelineSkeleton />;
+
   return (
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
       <Toast message={toast} />
@@ -103,36 +128,38 @@ export function TimelineView(){
         <div className="h2">Graphical segments</div>
         <div className="small">Hover and click a segment (seeking happens in Tasks).</div>
         <div className="split" />
-        <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          {TASKS.map(t=>{
-            const p=progressMap[t.videoId];
-            const dur=p?.durationSeconds||0;
-            const segs=p?.segments||[];
-            return (
-              <div key={t.id}>
-                <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-                  <div style={{fontWeight:950,letterSpacing:"-.01em"}}>{t.title}</div>
-                  <span className="badge">Watched {fmt(p?.watchedSecondsTotal||0)}</span>
-                </div>
-                <div className="small">Duration {fmt(dur)}</div>
-                <div style={{marginTop:8}}>
-                  <div className="timelineBar">
-                    {segs.map((seg,i)=>{
-                      const left=dur>0?(seg.start/dur)*100:0;
-                      const width=dur>0?Math.max(0.5,((seg.end-seg.start)/dur)*100):0;
-                      return (
-                        <span key={i} className="segment"
-                          style={{left:`${left}%`,width:`${width}%`,cursor:"pointer"}}
-                          title={`${fmt(seg.start)} → ${fmt(seg.end)}`}
-                          onClick={()=>onNodeSeek(p.videoId, seg.start)}
-                        />
-                      );
-                    })}
+        <div style={{maxHeight: 300, overflowY: 'auto', paddingRight: 12}}>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {tasks.map(t=>{
+              const p=progressMap[t.videoId];
+              const dur=p?.durationSeconds||0;
+              const segs=p?.segments||[];
+              return (
+                <div key={t.id} onClick={()=>openTask(t.videoId)} style={{cursor: 'pointer'}}>
+                  <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+                    <div style={{fontWeight:950,letterSpacing:"-.01em"}}>{t.title}</div>
+                    <span className="badge">Watched {fmt(p?.watchedSecondsTotal||0)}</span>
+                  </div>
+                  <div className="small">Duration {fmt(dur)}</div>
+                  <div style={{marginTop:8}}>
+                    <div className="timelineBar">
+                      {segs.map((seg,i)=>{
+                        const left=dur>0?(seg.start/dur)*100:0;
+                        const width=dur>0?Math.max(0.5,((seg.end-seg.start)/dur)*100):0;
+                        return (
+                          <span key={i} className="segment"
+                            style={{left:`${left}%`,width:`${width}%`,cursor:"pointer"}}
+                            title={`${fmt(seg.start)} → ${fmt(seg.end)}`}
+                            onClick={(ev)=>{ev.stopPropagation(); onNodeSeek(t.videoId, seg.start)} }
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div></div>
 
@@ -140,26 +167,26 @@ export function TimelineView(){
         <div className="h2">Tree view</div>
         <div className="small">Expand/collapse nodes. Segment nodes include a seek target.</div>
         <div className="split" />
-        <div className="tree">
+        <div className="tree" style={{maxHeight: 500, overflowY: 'auto'}}>
           {tree.length===0 && <div className="treeNode"><div className="treeMeta">No events yet. Watch a lesson to populate this view.</div></div>}
           {tree.map(d=>{
             const kDate=`date:${d.date}`;
             return (
               <div key={kDate} className="treeNode">
-                <div className="treeRow">
+                <div className="treeRow" onClick={()=>toggle(kDate)} style={{cursor: 'pointer'}}>
                   <div><div className="treeTitle">{d.date}</div><div className="treeMeta">{d.videos.length} videos</div></div>
-                  <button className="treeBtn" onClick={()=>toggle(kDate)}>{open[kDate]?"Collapse":"Expand"}</button>
+                  <button className="treeBtn">{open[kDate]?"Collapse":"Expand"}</button>
                 </div>
                 {open[kDate] && (
                   <div style={{padding:"8px 0 0 14px"}}>
                     {d.videos.map(v=>{
-                      const t=TASKS.find(x=>x.videoId===v.videoId);
+                      const t=tasks.find(x=>x.videoId===v.videoId);
                       const kVid=`${kDate}|vid:${v.videoId}`;
                       return (
                         <div key={kVid} style={{marginTop:10}}>
-                          <div className="treeRow">
+                          <div className="treeRow" onClick={()=>toggle(kVid)} style={{cursor: 'pointer'}}>
                             <div><div className="treeTitle">{t?.title||v.videoId}</div><div className="treeMeta">{v.sessions.length} sessions</div></div>
-                            <button className="treeBtn" onClick={()=>toggle(kVid)}>{open[kVid]?"Collapse":"Expand"}</button>
+                            <button className="treeBtn">{open[kVid]?"Collapse":"Expand"}</button>
                           </div>
                           {open[kVid] && (
                             <div style={{padding:"8px 0 0 14px"}}>
@@ -167,9 +194,9 @@ export function TimelineView(){
                                 const kSes=`${kVid}|ses:${idx}`;
                                 return (
                                   <div key={kSes} style={{marginTop:8}}>
-                                    <div className="treeRow">
+                                    <div className="treeRow" onClick={()=>toggle(kSes)} style={{cursor: 'pointer'}}>
                                       <div><div className="treeTitle">Session {idx+1}</div><div className="treeMeta">{s.events.length} events</div></div>
-                                      <button className="treeBtn" onClick={()=>toggle(kSes)}>{open[kSes]?"Collapse":"Expand"}</button>
+                                      <button className="treeBtn">{open[kSes]?"Collapse":"Expand"}</button>
                                     </div>
                                     {open[kSes] && (
                                       <div style={{padding:"8px 0 0 14px"}}>
@@ -183,7 +210,7 @@ export function TimelineView(){
                                                   <div className="treeTitle">{e.type}</div>
                                                   <div className="treeMeta">{stamp}{seg?` · ${fmt(seg.start)} → ${fmt(seg.end)}`:""}</div>
                                                 </div>
-                                                {seg && <button className="treeBtn" onClick={()=>onNodeSeek(p.videoId, seg.start)}>Seek {fmt(seg.start)}</button>}
+                                                {seg && <button className="treeBtn" onClick={(ev)=>{ev.stopPropagation(); onNodeSeek(e.videoId, seg.start)}}>Seek {fmt(seg.start)}</button>}
                                               </div>
                                             </div>
                                           );

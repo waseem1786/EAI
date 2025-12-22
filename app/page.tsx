@@ -1,17 +1,22 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { TASKS } from "../lib/tasks";
+import { type Task } from "../lib/tasks";
+import { DashboardSkeleton } from "../components/dashboard/DashboardSkeleton";
+import { StatCard } from "../components/dashboard/StatCard";
+import { ProgressPieChart } from "../components/dashboard/ProgressPieChart";
+import { DailyProgressChart } from "../components/dashboard/DailyProgressChart";
+import { TimeComparisonChart } from "../components/dashboard/TimeComparisonChart";
+import { DrillDownModal } from "../components/dashboard/DrillDownModal";
 import { useAuth } from "../components/auth/AuthContext";
-import { ResponsiveContainer, PieChart, Pie, Tooltip, Cell, BarChart, Bar, XAxis, YAxis } from "recharts";
 import { loadLocalProgress } from "../lib/local_fallback";
 
 type Progress = { videoId: string; watchedSecondsTotal: number; durationSeconds: number; lastPositionSeconds: number };
 
-async function getAllProgressFromAPI(): Promise<Record<string, Progress>> {
+async function getAllProgressFromAPI(tasks: Task[]): Promise<Record<string, Progress>> {
   const map: Record<string, Progress> = {};
-  for (const t of TASKS) {
+  for (const t of tasks) {
     const r = await fetch(`/api/progress?videoId=${encodeURIComponent(t.videoId)}`, { cache: "no-store" });
     if (!r.ok) continue;
     const j = await r.json().catch(() => ({}));
@@ -20,35 +25,44 @@ async function getAllProgressFromAPI(): Promise<Record<string, Progress>> {
   return map;
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter();
   const goTask = (taskId: string) => router.push(`/tasks?taskId=${encodeURIComponent(taskId)}`);
-  const goStatus = (status: string) => router.push(`/tasks?status=${encodeURIComponent(status)}`);
-
+  const goTaskStatus = (status: string) => router.push(`/tasks?status=${encodeURIComponent(status)}`);
   const { user, loading } = useAuth();
   const [progressMap, setProgressMap] = useState<Record<string, Progress>>({});
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [drillDown, setDrillDown] = useState<{ title: string; tasks: Task[] } | null>(null);
 
   useEffect(() => {
     const load = async () => {
+      setIsLoading(true);
+      const res = await fetch("/api/tasks");
+      const json = await res.json();
+      const fetchedTasks = json.tasks as Task[];
+      setTasks(fetchedTasks);
+
       if (user) {
-        const m = await getAllProgressFromAPI();
+        const m = await getAllProgressFromAPI(fetchedTasks);
         setProgressMap(m);
       } else {
         const m: Record<string, Progress> = {};
-        for (const t of TASKS) {
+        for (const t of fetchedTasks) {
           const p = loadLocalProgress(t.videoId);
           if (p) m[t.videoId] = p as any;
         }
         setProgressMap(m);
       }
+      setIsLoading(false);
     };
     load().catch(() => {});
   }, [user]);
 
-  const stats = useMemo(() => {
-    const total = TASKS.length;
+  const { stats, dailyProgress, timeComparison, tasksByStatus } = useMemo(() => {
+    const total = tasks.length;
     let watched = 0, done = 0, inProgress = 0;
-    for (const t of TASKS) {
+    for (const t of tasks) {
       const p = progressMap[t.videoId];
       if (p?.watchedSecondsTotal) watched += p.watchedSecondsTotal;
       const pct = p?.durationSeconds ? (p.lastPositionSeconds / p.durationSeconds) : 0;
@@ -56,11 +70,56 @@ export default function DashboardPage() {
       else if ((p?.lastPositionSeconds || 0) > 0) inProgress++;
     }
     const todo = total - done - inProgress;
-    return { total, done, inProgress, todo, watchedMin: Math.round(watched / 60) };
-  }, [progressMap]);
+
+    const dailyProgressMap: Record<number, number> = {};
+    for (const t of tasks) {
+      const p = progressMap[t.videoId];
+      const pct = p?.durationSeconds ? p.lastPositionSeconds / p.durationSeconds : 0;
+      if (pct >= 0.9) {
+        dailyProgressMap[t.day] = (dailyProgressMap[t.day] || 0) + 1;
+      }
+    }
+    const dailyProgress = Object.keys(dailyProgressMap).map(day => ({ day: Number(day), completed: dailyProgressMap[Number(day)] })).sort((a, b) => a.day - b.day);
+
+    const timeComparison = tasks.map(t => ({
+      name: t.id,
+      estimated: t.estimatedMinutes,
+      watched: Math.round((progressMap[t.videoId]?.watchedSecondsTotal || 0) / 60),
+    }));
+
+    const tasksByStatus = {
+      "To Do": tasks.filter(t => {
+        const p = progressMap[t.videoId];
+        const pct = p?.durationSeconds ? p.lastPositionSeconds / p.durationSeconds : 0;
+        return pct < 0.9 && (p?.lastPositionSeconds || 0) === 0;
+      }),
+      "In Progress": tasks.filter(t => {
+        const p = progressMap[t.videoId];
+        const pct = p?.durationSeconds ? p.lastPositionSeconds / p.durationSeconds : 0;
+        return pct < 0.9 && (p?.lastPositionSeconds || 0) > 0;
+      }),
+      "Done": tasks.filter(t => {
+        const p = progressMap[t.videoId];
+        const pct = p?.durationSeconds ? p.lastPositionSeconds / p.durationSeconds : 0;
+        return pct >= 0.9;
+      }),
+    };
+
+    return {
+      stats: { total, done, inProgress, todo, watchedMin: Math.round(watched / 60) },
+      dailyProgress,
+      timeComparison,
+      tasksByStatus,
+    };
+  }, [progressMap, tasks]);
 
   const pie = [{ name: "To Do", value: stats.todo }, { name: "In Progress", value: stats.inProgress }, { name: "Done", value: stats.done }];
+  if (!pie.some(p => p.value > 0)) {
+    pie[0].value = 1;
+  }
   const colors = ["#06b6d4", "#f59e0b", "#16a34a"];
+
+  if (isLoading) return <DashboardSkeleton />;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -68,7 +127,7 @@ export default function DashboardPage() {
         <div className="cardInner" style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
             <h1 className="h1">Dashboard</h1>
-            <p className="p">World-class UI. Click-to-play, resume, watch-time tracking, segments, and timeline tree view.</p>
+            <p className="p">AI Learning Tracker with Gantt, Board & Grid views</p>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
             {loading ? (
@@ -83,41 +142,52 @@ export default function DashboardPage() {
       </motion.div>
 
       <div className="grid3">
-        <div className="card cardSoft"><div className="cardInner"><div className="h2">Lessons</div><div style={{ fontSize: 28, fontWeight: 950, letterSpacing: "-0.03em" }}>{stats.total}</div><div className="small">AI learning tasks</div></div></div>
-        <div className="card cardSoft"><div className="cardInner"><div className="h2">Watched</div><div style={{ fontSize: 28, fontWeight: 950, letterSpacing: "-0.03em" }}>{stats.watchedMin}m</div><div className="small">Counted only while playing</div></div></div>
-        <div className="card cardSoft"><div className="cardInner"><div className="h2">Completed</div><div style={{ fontSize: 28, fontWeight: 950, letterSpacing: "-0.03em" }}>{stats.done}</div><div className="small">Auto at ~90%</div></div></div>
+        <StatCard title="Lessons" value={stats.total} description="AI learning tasks" />
+        <StatCard title="Watched" value={stats.watchedMin} unit="m" description="Counted only while playing" />
+        <StatCard title="Completed" value={stats.done} description="Auto at ~90%" />
       </div>
 
       <div className="grid2">
-        <div className="card"><div className="cardInner">
-          <div className="h2">Progress distribution</div>
-          <div className="small">Updates automatically.</div>
-          <div style={{ height: 260, marginTop: 12 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={pie} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2}>
-                  {pie.map((_, i) => <Cell key={i} fill={colors[i]} />)}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div></div>
-        <div className="card"><div className="cardInner">
-          <div className="h2">Watch minutes per lesson</div>
-          <div className="small">Per user when logged in. Local fallback otherwise.</div>
-          <div style={{ height: 260, marginTop: 12 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={TASKS.map(t => ({ name: t.id, minutes: Math.round((progressMap[t.videoId]?.watchedSecondsTotal || 0)/60) }))}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="minutes" fill="#8b5cf6" radius={[8,8,0,0]} onClick={(d:any) => { const tid = d?.payload?.name; if (tid) goTask(String(tid)); }} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div></div>
+        <ProgressPieChart data={pie} onPieClick={(name) => {
+          const statusMap: Record<string, string> = { "To Do": "todo", "In Progress": "doing", "Done": "done" };
+          goTaskStatus(statusMap[name]);
+        }} />
+        <TimeComparisonChart data={timeComparison} onBarClick={(name) => {
+          const task = tasks.find(t => t.id === name);
+          if (task) {
+            setDrillDown({ title: `Task: ${name}`, tasks: [task] });
+          }
+        }} />
       </div>
+      <div className="grid1">
+        <DailyProgressChart data={dailyProgress} onDayClick={(day) => {
+          const tasksForDay = tasks.filter(t => t.day === day && tasksByStatus.Done.some(dt => dt.id === t.id));
+          setDrillDown({ title: `Tasks Completed on Day ${day}`, tasks: tasksForDay });
+        }} />
+      </div>
+      {drillDown && (
+        <DrillDownModal title={drillDown.title} onClose={() => setDrillDown(null)}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 400, overflowY: "auto" }}>
+            {drillDown.tasks.map(t => (
+              <div key={t.id} className="card cardSoft" style={{ cursor: "pointer" }} onClick={() => goTask(t.id)}>
+                <div className="cardInner">
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{t.title}</div>
+                  <div className="small">Day {t.day} · {t.estimatedMinutes} min</div>
+                </div>
+              </div>
+            ))}
+            {drillDown.tasks.length === 0 && <div className="small">No tasks in this category.</div>}
+          </div>
+        </DrillDownModal>
+      )}
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="card"><div className="cardInner">Loading dashboard...</div></div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }

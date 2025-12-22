@@ -1,0 +1,292 @@
+[
+  {
+    "id": "D1-T1",
+    "day": 1,
+    "title": "AI vs ML vs DL overview",
+    "description": "Understand the map: AI ⇨ ML ⇨ Deep Learning, and why it matters.",
+    "estimatedMinutes": 60,
+    "videoId": "2ePf9rue1Ao",
+    "url": "https://www.youtube.com/watch?v=2ePf9rue1Ao",
+    "lessonText": "You learn the high-level map: AI is the broader goal, ML is learning from data, and DL is a subset of ML using neural networks. You also learn where rules-based systems fit and why data quality matters."
+  },
+  {
+    "id": "D2-T1",
+    "day": 2,
+    "title": "Python basics for AI",
+    "description": "Variables, loops, conditions — enough to start reading AI code.",
+    "estimatedMinutes": 90,
+    "videoId": "rfscVS0vtbw",
+    "url": "https://www.youtube.com/watch?v=rfscVS0vtbw",
+    "lessonText": "You practice writing small scripts, control flow, functions, and basic data types. The goal is to become comfortable reading and modifying code used in notebooks and ML projects."
+  },
+  {
+    "id": "D3-T1",
+    "day": 3,
+    "title": "Numpy essentials",
+    "description": "Arrays, shapes, vectorization — the building blocks of ML.",
+    "estimatedMinutes": 75,
+    "videoId": "QUT1VHiLmmI",
+    "url": "https://www.youtube.com/watch?v=QUT1VHiLmmI",
+    "lessonText": "You learn arrays, broadcasting, vectorized operations, and why performance matters. You should be able to reshape and manipulate tensors confidently."
+  },
+  {
+    "id": "D4-T1",
+    "day": 4,
+    "title": "Pandas for datasets",
+    "description": "Load, clean, filter, and explore datasets like a pro.",
+    "estimatedMinutes": 90,
+    "videoId": "vmEHCJofslg",
+    "url": "https://www.youtube.com/watch?v=vmEHCJofslg",
+    "lessonText": "You learn DataFrames, selecting/filtering, handling missing values, grouping/aggregations, and preparing features for training."
+  },
+  {
+    "id": "D5-T1",
+    "day": 5,
+    "title": "Supervised learning intuition",
+    "description": "Train/test split, overfitting, metrics — the core training loop.",
+    "estimatedMinutes": 80,
+    "videoId": "xxpc-HPKN28",
+    "url": "https://www.youtube.com/watch?v=xxpc-HPKN28",
+    "lessonText": "You learn the training loop, generalization, overfitting, and evaluation. You should understand why we split data and how metrics guide improvements."
+  },
+  {
+    "id": "D6-T1",
+    "day": 6,
+    "title": "Neural networks basics",
+    "description": "Perceptron, activation, backprop — why DL works.",
+    "estimatedMinutes": 90,
+    "videoId": "fNk_zzaMoSs",
+    "url": "https://www.youtube.com/watch?v=fNk_zzaMoSs",
+    "lessonText": "You learn neurons, layers, activations, and backprop at an intuitive level. You should be able to explain why depth helps and what gradients do."
+  },
+  {
+    "id": "D7-T1",
+    "day": 7,
+    "title": "Your first model (end-to-end)",
+    "description": "From dataset ⇨ features ⇨ training ⇨ evaluation.",
+    "estimatedMinutes": 120,
+    "videoId": "kCc8FmEb1nY",
+    "url": "https://www.youtube.com/watch?v=kCc8FmEb1nY",
+    "lessonText": "You follow a full pipeline and learn the practical steps. The objective is not perfection; it is to build a mental template you can reuse."
+  },
+  {
+    "id": "D8-T1",
+    "day": 8,
+    "title": "MLOps & tracking progress",
+    "description": "Versioning, experiment logs, and keeping momentum.",
+    "estimatedMinutes": 45,
+    "videoId": "CS4cs9xVecg",
+    "url": "https://www.youtube.com/watch?v=CS4cs9xVecg",
+    "lessonText": "You learn how to track experiments, manage datasets, keep notes, and maintain consistency. This app mirrors that habit by tracking watch time and sessions."
+  },
+  {
+    "id": "D9-T1",
+    "day": 9,
+    "title": "Python functions & practice problems",
+    "description": "Write small functions and solve practice problems using loops and functions.",
+    "estimatedMinutes": 90,
+    "videoId": "tN2sqeFOQXk",
+    "url": "https://www.youtube.com/watch?v=tN2sqeFOQXk",
+    "lessonText": "Practice defining functions, passing arguments, and returning values. Solve common coding challenges to solidify your understanding of control flow and functions."
+  },
+  {
+    "id": "D10-T1",
+    "day": 10,
+    "title": "Lists & dictionaries",
+    "description": "Learn Python lists, dictionaries, tuples and basic scripts.",
+    "estimatedMinutes": 90,
+    "videoId": "m0hi-R82eUY",
+    "url": "https://www.youtube.com/watch?v=m0hi-R82eUY",
+    "lessonText": "Understand how to store and access data using Python's fundamental data structures: lists for ordered sequences and dictionaries for key-value pairs."
+  },
+  {
+    "id": "D11-T1",
+    "day": 11,
+    "title": "Statistics basics for ML",
+    "description": "Mean, variance, standard deviation and basic distributions.",
+    "estimatedMinutes": 90,
+    "videoId": "Iq9DzN6mv1g",
+    "url": "https://www.youtube.com/watch?v=Iq9DzN6mv1g",
+    "lessonText": "Grasp core statistical concepts like mean, variance, and distributions, which are fundamental for understanding and evaluating machine learning models."
+  },
+  {
+    "id": "D12-T1",
+    "day": 12,
+    "title": "Probability & Bayes rule intuition",
+    "description": "Conditional probability, Bayes rule, correlation vs causation.",
+    "estimatedMinutes": 90,
+    "videoId": "HZGCoVF3YvM",
+    "url": "https://www.youtube.com/watch?v=HZGCoVF3YvM",
+    "lessonText": "Develop an intuitive understanding of probability and how Bayes' theorem allows us to update our beliefs in the light of new evidence, a core concept in ML."
+  },
+  {
+    "id": "D13-T1",
+    "day": 13,
+    "title": "Linear algebra for ML",
+    "description": "Vectors, matrices, dot product and matrix multiplication.",
+    "estimatedMinutes": 90,
+    "videoId": "kZwSqZuBMGg",
+    "url": "https://www.youtube.com/watch?v=kZwSqZuBMGg",
+    "lessonText": "Learn the basics of linear algebra, including vectors and matrices, which are essential for representing data and understanding the mechanics of many ML algorithms."
+  },
+  {
+    "id": "D14-T1",
+    "day": 14,
+    "title": "Calculus intuition for ML",
+    "description": "Understand derivatives and gradients for optimization.",
+    "estimatedMinutes": 90,
+    "videoId": "WUvTsay3G_U",
+    "url": "https://www.youtube.com/watch?v=WUvTsay3G_U",
+    "lessonText": "Gain an intuitive understanding of calculus concepts like derivatives and gradients, which are crucial for optimizing machine learning models."
+  },
+  {
+    "id": "D15-T1",
+    "day": 15,
+    "title": "First ML model in scikit-learn",
+    "description": "Implement linear regression or KNN on a simple dataset.",
+    "estimatedMinutes": 120,
+    "videoId": "CaRcRk2c8bM",
+    "url": "https://www.youtube.com/watch?v=CaRcRk2c8bM",
+    "lessonText": "Get hands-on experience by building your first machine learning model using the popular scikit-learn library."
+  },
+  {
+    "id": "D16-T1",
+    "day": 16,
+    "title": "Overfitting, underfitting & evaluation metrics",
+    "description": "Learn accuracy, precision, recall and F1-score.",
+    "estimatedMinutes": 90,
+    "videoId": "2azSqdp-_EY",
+    "url": "https://www.youtube.com/watch?v=2azSqdp-_EY",
+    "lessonText": "Understand the concepts of overfitting and underfitting, and learn how to evaluate your models using key metrics like accuracy, precision, and recall."
+  },
+  {
+    "id": "D17-T1",
+    "day": 17,
+    "title": "Deep learning course session",
+    "description": "Watch 1–2 lectures on building deep neural networks.",
+    "estimatedMinutes": 120,
+    "videoId": "VyWAvY2CF9c",
+    "url": "https://www.youtube.com/watch?v=VyWAvY2CF9c",
+    "lessonText": "Dive into deep learning by watching lectures that cover the fundamentals of building and training deep neural networks."
+  },
+  {
+    "id": "D18-T1",
+    "day": 18,
+    "title": "Build a simple neural network",
+    "description": "Use Keras or PyTorch to train a small network on MNIST or similar dataset.",
+    "estimatedMinutes": 120,
+    "videoId": "w8yWXqWQYmU",
+    "url": "https://www.youtube.com/watch?v=w8yWXqWQYmU",
+    "lessonText": "Apply your knowledge by building a simple neural network from scratch using a popular deep learning framework like Keras or PyTorch."
+  },
+  {
+    "id": "D19-T1",
+    "day": 19,
+    "title": "Convolutional Neural Networks (CNNs)",
+    "description": "Understand filters, stride, padding and pooling.",
+    "estimatedMinutes": 90,
+    "videoId": "YRhxdVk_sIs",
+    "url": "https://www.youtube.com/watch?v=YRhxdVk_sIs",
+    "lessonText": "Learn the fundamentals of Convolutional Neural Networks (CNNs), including the key concepts of filters, stride, padding, and pooling."
+  },
+  {
+    "id": "D20-T1",
+    "day": 20,
+    "title": "Build a simple CNN classifier",
+    "description": "Train a CNN on an image dataset such as digits or cats vs dogs.",
+    "estimatedMinutes": 150,
+    "videoId": "jztwpsIzEGc",
+    "url": "https://www.youtube.com/watch?v=jztwpsIzEGc",
+    "lessonText": "Put your CNN knowledge into practice by building and training a simple image classifier on a real-world dataset."
+  },
+  {
+    "id": "D21-T1",
+    "day": 21,
+    "title": "RNNs and LSTMs",
+    "description": "Learn sequence modeling concepts for text and time series.",
+    "estimatedMinutes": 90,
+    "videoId": "S0XFd0VMFss",
+    "url": "https://www.youtube.com/watch?v=S0XFd0VMFss",
+    "lessonText": "Explore Recurrent Neural Networks (RNNs) and Long Short-Term Memory (LSTM) networks, and learn how they are used for sequence modeling tasks."
+  },
+  {
+    "id": "D22-T1",
+    "day": 22,
+    "title": "Mini project polish",
+    "description": "Pick one project and clean code, comments, plots and README.",
+    "estimatedMinutes": 150,
+    "videoId": "rQo1vkCe8OE",
+    "url": "https://www.youtube.com/watch?v=rQo1vkCe8OE",
+    "lessonText": "Learn how to polish your machine learning projects by cleaning up your code, adding comments, creating informative plots, and writing a clear README."
+  },
+  {
+    "id": "D23-T1",
+    "day": 23,
+    "title": "Transformers & attention (high level)",
+    "description": "Learn what transformers are and why attention is powerful.",
+    "estimatedMinutes": 90,
+    "videoId": "eMlx5fFNoYc",
+    "url": "https://www.youtube.com/watch?v=eMlx5fFNoYc",
+    "lessonText": "Get a high-level overview of the Transformer architecture and the attention mechanism that makes it so powerful."
+  },
+  {
+    "id": "D24-T1",
+    "day": 24,
+    "title": "Build a GPT from scratch – theory walkthrough",
+    "description": "Skim a 'GPT from scratch' video to understand tokenization, attention and training loop.",
+    "estimatedMinutes": 120,
+    "videoId": "kCc8FmEb1nY",
+    "url": "https://www.youtube.com/watch?v=kCc8FmEb1nY",
+    "lessonText": "Understand the theory behind building a GPT model from scratch, including tokenization, attention, and the training loop."
+  },
+  {
+    "id": "D25-T1",
+    "day": 25,
+    "title": "Play with an open-source LLM",
+    "description": "Use an LLM (API or local) and test prompts for Q&A and summarisation.",
+    "estimatedMinutes": 90,
+    "videoId": "gqCZ_sFha7E",
+    "url": "https://www.youtube.com/watch?v=gqCZ_sFha7E",
+    "lessonText": "Get hands-on experience with a large language model by using an open-source LLM for tasks like question answering and summarization."
+  },
+  {
+    "id": "D26-T1",
+    "day": 26,
+    "title": "Learn prompt engineering techniques",
+    "description": "Role prompting, step-by-step reasoning, few-shot examples, constraints.",
+    "estimatedMinutes": 90,
+    "videoId": "_ZvnD73m40o",
+    "url": "https://www.youtube.com/watch?v=_ZvnD73m40o",
+    "lessonText": "Learn various prompt engineering techniques, including role prompting, step-by-step reasoning, and few-shot examples, to get better results from large language models."
+  },
+  {
+    "id": "D27-T1",
+    "day": 27,
+    "title": "Create your own prompt library",
+    "description": "Organise prompts for coding, learning, automation and writing.",
+    "estimatedMinutes": 120,
+    "videoId": "f3IeLIT_HRc",
+    "url": "https://www.youtube.com/watch?v=f3IeLIT_HRc",
+    "lessonText": "Create your own personal prompt library to organize and reuse effective prompts for various tasks like coding, learning, and writing."
+  },
+  {
+    "id": "D28-T1",
+    "day": 28,
+    "title": "Explore AI productivity tools",
+    "description": "Test multiple AI tools on your daily workflow and compare.",
+    "estimatedMinutes": 120,
+    "videoId": "2ROmdJKLHqA",
+    "url": "https://www.youtube.com/watch?v=2ROmdJKLHqA",
+    "lessonText": "Explore and compare various AI productivity tools to see how they can be integrated into your daily workflow to improve efficiency."
+  },
+  {
+    "id": "D29-T1",
+    "day": 29,
+    "title": "Review & reflection",
+    "description": "Write a 1–2 page summary of what you learned and next topics to study.",
+    "estimatedMinutes": 90,
+    "videoId": "gNfm8R2iMPk",
+    "url": "https://www.youtube.com/watch?v=gNfm8R2iMPk",
+    "lessonText": "Take time to review and reflect on your learning journey by summarizing what you have learned and identifying what you want to study next."
+  }
+]
