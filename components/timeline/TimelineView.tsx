@@ -119,6 +119,16 @@ export function TimelineView(){
             cur.push(e);
             continue;
           }
+
+          // Opening the same video again is treated as a new session boundary.
+          if (e.type === "play_opened") {
+            sessions.push({id:`${videoId}-${sessions.length+1}`,events:cur});
+            cur = [e];
+            curHasPlayMarker = true;
+            curHasPaused = false;
+            continue;
+          }
+
           const prev=cur[cur.length-1];
           const diff=(new Date(e.createdAt).getTime()-new Date(prev.createdAt).getTime())/60000;
           if(diff<=20) {
