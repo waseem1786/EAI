@@ -15,12 +15,23 @@ import { loadLocalProgress } from "../lib/local_fallback";
 type Progress = { videoId: string; watchedSecondsTotal: number; durationSeconds: number; lastPositionSeconds: number };
 
 async function getAllProgressFromAPI(tasks: Task[]): Promise<Record<string, Progress>> {
+  const entries: Array<[string, Progress] | null> = await Promise.all(
+    tasks.map(async (t) => {
+      try {
+        const r = await fetch(`/api/progress?videoId=${encodeURIComponent(t.videoId)}`, { cache: "no-store" });
+        if (!r.ok) return null;
+        const j = await r.json().catch(() => ({} as any));
+        return j?.progress ? [t.videoId, j.progress] as [string, Progress] : null;
+      } catch {
+        return null;
+      }
+    })
+  );
   const map: Record<string, Progress> = {};
-  for (const t of tasks) {
-    const r = await fetch(`/api/progress?videoId=${encodeURIComponent(t.videoId)}`, { cache: "no-store" });
-    if (!r.ok) continue;
-    const j = await r.json().catch(() => ({}));
-    if (j?.progress) map[t.videoId] = j.progress;
+  for (const pair of entries) {
+    if (!pair) continue;
+    const [key, value] = pair;
+    map[key] = value;
   }
   return map;
 }

@@ -53,10 +53,23 @@ export function TimelineView(){
         setEvents(evs.events);
         setTasks(ts.tasks);
 
-        const map:Record<string,Progress>={};
-        for(const t of ts.tasks){
-          const j=await fetchJson<{progress:Progress|null}>(`/api/progress?videoId=${encodeURIComponent(t.videoId)}`);
-          if(j.progress) map[t.videoId]=j.progress;
+        const eventVideoIds = Array.from(new Set((evs.events || []).map(e => e.videoId).filter(Boolean)));
+        const targetIds = eventVideoIds.length > 0 ? eventVideoIds : ts.tasks.map(t => t.videoId);
+        const entries = await Promise.all(
+          targetIds.map(async (vid) => {
+            try{
+              const j = await fetchJson<{progress:Progress|null}>(`/api/progress?videoId=${encodeURIComponent(vid)}`);
+              return j.progress ? ([vid, j.progress] as [string, Progress]) : null;
+            }catch{
+              return null;
+            }
+          })
+        );
+        const map: Record<string, Progress> = {};
+        for (const e of entries) {
+          if (!e) continue;
+          const [k, v] = e;
+          map[k] = v;
         }
         setProgressMap(map);
       } catch (e: any) {
