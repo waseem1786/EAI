@@ -109,24 +109,25 @@ export function TimelineView(){
         const evs=byVideo[videoId].slice().sort((a,b)=>a.createdAt<b.createdAt?-1:1);
         const sessions:{id:string;events:EventItem[]}[]=[];
         let cur:EventItem[]=[];
-        let curHasPlayOpened = false;
+        let curHasPlayMarker = false;
+        const isPlayMarker = (t: string) => t === "play_opened" || t === "playing";
         for(const e of evs){
           if(cur.length===0){
-            curHasPlayOpened = e.type === "play_opened";
+            curHasPlayMarker = isPlayMarker(e.type);
             cur.push(e);
             continue;
           }
           const prev=cur[cur.length-1];
           const diff=(new Date(e.createdAt).getTime()-new Date(prev.createdAt).getTime())/60000;
           if(diff<=20) {
-            if (e.type === "play_opened" && curHasPlayOpened) continue;
-            if (e.type === "play_opened") curHasPlayOpened = true;
+            if (isPlayMarker(e.type) && curHasPlayMarker) continue;
+            if (isPlayMarker(e.type)) curHasPlayMarker = true;
             cur.push(e);
           }
           else {
             sessions.push({id:`${videoId}-${sessions.length+1}`,events:cur});
             cur = [e];
-            curHasPlayOpened = e.type === "play_opened";
+            curHasPlayMarker = isPlayMarker(e.type);
           }
         }
         if(cur.length) sessions.push({id:`${videoId}-${sessions.length+1}`,events:cur});
