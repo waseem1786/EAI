@@ -110,10 +110,12 @@ export function TimelineView(){
         const sessions:{id:string;events:EventItem[]}[]=[];
         let cur:EventItem[]=[];
         let curHasPlayMarker = false;
+        let curHasPaused = false;
         const isPlayMarker = (t: string) => t === "play_opened" || t === "playing";
         for(const e of evs){
           if(cur.length===0){
             curHasPlayMarker = isPlayMarker(e.type);
+            curHasPaused = e.type === "paused";
             cur.push(e);
             continue;
           }
@@ -122,12 +124,15 @@ export function TimelineView(){
           if(diff<=20) {
             if (isPlayMarker(e.type) && curHasPlayMarker) continue;
             if (isPlayMarker(e.type)) curHasPlayMarker = true;
+            if (e.type === "paused" && curHasPaused) continue;
+            if (e.type === "paused") curHasPaused = true;
             cur.push(e);
           }
           else {
             sessions.push({id:`${videoId}-${sessions.length+1}`,events:cur});
             cur = [e];
             curHasPlayMarker = isPlayMarker(e.type);
+            curHasPaused = e.type === "paused";
           }
         }
         if(cur.length) sessions.push({id:`${videoId}-${sessions.length+1}`,events:cur});
