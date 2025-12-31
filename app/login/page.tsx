@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../components/auth/AuthContext";
 import { Toast } from "../../components/ui/Toast";
+import { LogIn, UserPlus } from 'lucide-react';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -30,9 +31,9 @@ export default function LoginPage() {
           <form onSubmit={onSubmit}>
             <div><div className="label">Email</div><input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></div>
             <div style={{ marginTop: 10 }}><div className="label">Password</div><input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" /></div>
-            <div className="btnRow" style={{ marginTop: 12 }}>
-              <button className="btn btnPrimary" type="submit">Login</button>
-              <a className="btn btnGhost" href="/register">Create account</a>
+                        <div className="btnRow" style={{ marginTop: 12 }}>
+              <button className="btn btnPrimary" type="submit"><LogIn size={16} /> Login</button>
+              <a className="btn btnGhost" href="/register"><UserPlus size={16} /> Create account</a>
             </div>
           </form>
         </div>

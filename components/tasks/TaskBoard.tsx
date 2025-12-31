@@ -12,6 +12,7 @@ import { PlayerState } from "../video/YouTubePlayer";
 import { Toast } from "../ui/Toast";
 import { useAuth } from "../auth/AuthContext";
 import { loadLocalProgress, saveLocalProgress } from "../../lib/local_fallback";
+import { LayoutDashboard, LayoutGrid, BarChart3 } from 'lucide-react';
 
 type Segment = { start: number; end: number };
 type Progress = { videoId: string; lastPositionSeconds: number; watchedSecondsTotal: number; durationSeconds: number; segments: Segment[] };
@@ -227,10 +228,10 @@ export function TaskBoard({ initialTaskId, initialStatus, initialSeekSeconds }: 
               <option value="in-progress">In Progress</option>
               <option value="done">Done</option>
             </select>
-            <div className="btnRow">
-              <button className={`btn ${viewMode === "board" ? "btnPrimary" : "btnGhost"}`} onClick={() => setViewMode("board")}>Board</button>
-              <button className={`btn ${viewMode === "grid" ? "btnPrimary" : "btnGhost"}`} onClick={() => setViewMode("grid")}>Grid</button>
-              <button className={`btn ${viewMode === "gantt" ? "btnPrimary" : "btnGhost"}`} onClick={() => setViewMode("gantt")}>Gantt</button>
+                        <div className="btnRow">
+              <button className={`btn ${viewMode === "board" ? "btnPrimary" : "btnGhost"}`} onClick={() => setViewMode("board")}><LayoutDashboard size={16} /> Board</button>
+              <button className={`btn ${viewMode === "grid" ? "btnPrimary" : "btnGhost"}`} onClick={() => setViewMode("grid")}><LayoutGrid size={16} /> Grid</button>
+              <button className={`btn ${viewMode === "gantt" ? "btnPrimary" : "btnGhost"}`} onClick={() => setViewMode("gantt")}><BarChart3 size={16} /> Gantt</button>
             </div>
           </div>
         </div>

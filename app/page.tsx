@@ -11,6 +11,9 @@ import { TimeComparisonChart } from "../components/dashboard/TimeComparisonChart
 import { DrillDownModal } from "../components/dashboard/DrillDownModal";
 import { useAuth } from "../components/auth/AuthContext";
 import { loadLocalProgress } from "../lib/local_fallback";
+import { Banner } from "../components/ui/Banner";
+import { Reviews } from "../components/ui/Reviews";
+import { Book, Clock, CheckCircle, ArrowRight, GanttChartSquare } from "lucide-react";
 
 type Progress = { videoId: string; watchedSecondsTotal: number; durationSeconds: number; lastPositionSeconds: number };
 
@@ -159,9 +162,9 @@ function DashboardContent() {
               <div className="h2" style={{ fontSize: 18 }}>Learn faster with a system</div>
               <div className="p" style={{ marginTop: 6 }}>Board + Grid + Gantt views, auto-resume playback, and a timeline of sessions — all in one place.</div>
             </div>
-            <div className="btnRow" style={{ marginTop: 4 }}>
-              <button className="btn btnPrimary" onClick={() => router.push("/tasks")}>Open Tasks</button>
-              <button className="btn btnGhost" onClick={() => router.push("/timeline")}>View Timeline</button>
+                        <div className="btnRow" style={{ marginTop: 4 }}>
+              <button className="btn btnPrimary" onClick={() => router.push("/tasks")}>Open Tasks <ArrowRight size={16} /></button>
+              <button className="btn btnGhost" onClick={() => router.push("/timeline")}><GanttChartSquare size={16} /> View Timeline</button>
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
@@ -187,11 +190,15 @@ function DashboardContent() {
         </div>
       </motion.div>
 
+            <Banner />
+
       <div className="grid3">
-        <StatCard title="Lessons" value={stats.total} description="AI learning tasks" />
-        <StatCard title="Watched" value={stats.watchedMin} unit="m" description="Counted only while playing" />
-        <StatCard title="Completed" value={stats.done} description="Auto at ~90%" />
+        <StatCard title="Lessons" value={stats.total} description="AI learning tasks" icon={<Book size={20} style={{ color: 'var(--muted)' }} />} />
+        <StatCard title="Watched" value={stats.watchedMin} unit="m" description="Counted only while playing" icon={<Clock size={20} style={{ color: 'var(--muted)' }} />} />
+        <StatCard title="Completed" value={stats.done} description="Auto at ~90%" icon={<CheckCircle size={20} style={{ color: 'var(--muted)' }} />} />
       </div>
+
+            <Reviews />
 
       <div className="grid2">
         <ProgressPieChart data={pie} onPieClick={(name) => {

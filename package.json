@@ -9,25 +9,26 @@
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "framer-motion": "^11.0.0",
+    "jose": "^5.9.6",
+    "lucide-react": "^0.562.0",
+    "mongoose": "^8.5.2",
     "next": "14.2.3",
     "react": "18.2.0",
+    "react-beautiful-dnd": "^13.1.1",
     "react-dom": "18.2.0",
-    "framer-motion": "^11.0.0",
-    "recharts": "^2.12.7",
-    "mongoose": "^8.5.2",
-    "bcryptjs": "^2.4.3",
-    "jose": "^5.9.6",
-    "react-beautiful-dnd": "^13.1.1"
+    "recharts": "^2.12.7"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/dotenv": "^8.2.0",
     "@types/node": "^20.11.30",
     "@types/react": "^18.2.66",
+    "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-dom": "^18.2.22",
-    "@types/bcryptjs": "^2.4.6",
-    "tsx": "^4.16.2",
     "dotenv": "^16.4.5",
-    "@types/dotenv": "^8.2.0",
-    "@types/react-beautiful-dnd": "^13.1.8"
+    "tsx": "^4.16.2",
+    "typescript": "^5.4.0"
   }
 }
