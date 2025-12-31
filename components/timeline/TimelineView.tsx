@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { type Task } from "../../lib/tasks";
 import { Toast } from "../ui/Toast";
 import { TimelineSkeleton } from "./TimelineSkeleton";
+import { useAuth } from "../auth/AuthContext";
 
 type EventItem = { _id: string; videoId: string; taskId: string; type: string; data?: any; createdAt: string; };
 type Progress = { videoId: string; watchedSecondsTotal: number; durationSeconds: number; segments: { start:number; end:number }[]; };
@@ -19,6 +20,7 @@ async function fetchJson<T>(url:string):Promise<T>{
 }
 
 export function TimelineView(){
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events,setEvents]=useState<EventItem[]>([]);
@@ -36,6 +38,11 @@ export function TimelineView(){
   };
 
   useEffect(()=>{
+    if (authLoading) return;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
     async function load() {
       setIsLoading(true);
       try {
@@ -58,7 +65,7 @@ export function TimelineView(){
       setIsLoading(false);
     }
     load();
-  },[]);
+  },[user, authLoading]);
 
   useEffect(()=>{ const t=window.setTimeout(()=>setToast(null), toast?2600:0); return ()=>window.clearTimeout(t); },[toast]);
 
@@ -109,7 +116,18 @@ export function TimelineView(){
     openTask(videoId, seconds);
   };
 
-  if (isLoading) return <TimelineSkeleton />;
+  if (isLoading || authLoading) return <TimelineSkeleton />;
+
+  if (!user) {
+    return (
+      <div className="card">
+        <div className="cardInner">
+          <h1 className="h1">Timeline</h1>
+          <p className="p">Please log in to view your timeline.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:16}}>

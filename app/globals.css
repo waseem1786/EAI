@@ -165,6 +165,14 @@ button,select,input{font-family:inherit}
 }
 .badge:hover{transform:scale(1.02)}
 
+.skeleton{
+  background:linear-gradient(90deg,rgba(148,163,184,.15),rgba(148,163,184,.25),rgba(148,163,184,.15));
+  background-size:200% 100%;
+  animation:skeleton 1.5s infinite;
+  border-radius:8px;
+}
+@keyframes skeleton{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
 .btnRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .btn{
   border:1px solid var(--border);
