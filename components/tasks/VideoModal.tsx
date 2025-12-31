@@ -50,9 +50,6 @@ export function VideoModal({
                 <div className="h2" style={{ color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>{task.title}</div>
                 <div className="small" style={{ color: "#eee", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>Day {task.day} · {task.estimatedMinutes} min</div>
               </div>
-              <div className="modalActions">
-                <a className="btn btnGhost" href={`https://www.youtube.com/watch?v=${task.videoId}`} target="_blank" rel="noreferrer">Open on YouTube</a>
-              </div>
             </div>
             <div className="modalVideoContainer">
               <div className="modalVideo">

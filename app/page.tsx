@@ -138,7 +138,7 @@ function DashboardContent() {
         <div className="cardInner" style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
             <h1 className="h1">Dashboard</h1>
-            <p className="p">AI Learning Tracker with Gantt, Board & Grid views</p>
+            <p className="p">A focused learning workspace: plan lessons, track watch time, and build consistency.</p>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
             {loading ? (
@@ -148,6 +148,41 @@ function DashboardContent() {
             ) : (
               <span className="badge">Not signed in — tracking is saved locally in this browser.</span>
             )}
+          </div>
+        </div>
+      </motion.div>
+
+      <motion.div className="card cardSoft" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.05 }}>
+        <div className="cardInner" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ minWidth: 260, flex: 1 }}>
+              <div className="h2" style={{ fontSize: 18 }}>Learn faster with a system</div>
+              <div className="p" style={{ marginTop: 6 }}>Board + Grid + Gantt views, auto-resume playback, and a timeline of sessions — all in one place.</div>
+            </div>
+            <div className="btnRow" style={{ marginTop: 4 }}>
+              <button className="btn btnPrimary" onClick={() => router.push("/tasks")}>Open Tasks</button>
+              <button className="btn btnGhost" onClick={() => router.push("/timeline")}>View Timeline</button>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+            <motion.div className="card" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.12 }}>
+              <div className="cardInner">
+                <div className="h2">Momentum</div>
+                <div className="p">Turn lessons into a daily habit with visible progress and clear next steps.</div>
+              </div>
+            </motion.div>
+            <motion.div className="card" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.18 }}>
+              <div className="cardInner">
+                <div className="h2">Clarity</div>
+                <div className="p">See your plan in Board, Grid, or Gantt — whatever matches how you think.</div>
+              </div>
+            </motion.div>
+            <motion.div className="card" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.24 }}>
+              <div className="cardInner">
+                <div className="h2">Continuity</div>
+                <div className="p">Resume right where you left off, and review your sessions in Timeline.</div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </motion.div>

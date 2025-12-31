@@ -25,7 +25,7 @@ export default function LoginPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="card cardSoft">
         <div className="cardInner" style={{ maxWidth: 520, margin: "0 auto" }}>
           <h1 className="h1" style={{ fontSize: 26 }}>Login</h1>
-          <p className="p">Sign in to sync your progress to MongoDB Atlas.</p>
+          <p className="p">Sign in to sync progress across devices and keep your learning history.</p>
           <div className="split" />
           <form onSubmit={onSubmit}>
             <div><div className="label">Email</div><input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></div>

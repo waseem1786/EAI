@@ -216,7 +216,7 @@ export function TaskBoard({ initialTaskId, initialStatus, initialSeekSeconds }: 
         <div className="cardInner" style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
             <h1 className="h1">Tasks</h1>
-            <p className="p">View as Board, Grid or Gantt. All synced to MongoDB.</p>
+            <p className="p">Plan your lessons, prioritize what matters, and track progress across views.</p>
           </div>
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <span className="badge">Player: {playerState}</span>

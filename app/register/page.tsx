@@ -25,7 +25,7 @@ export default function RegisterPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="card cardSoft">
         <div className="cardInner" style={{ maxWidth: 520, margin: "0 auto" }}>
           <h1 className="h1" style={{ fontSize: 26 }}>Register</h1>
-          <p className="p">Create an account stored in MongoDB Atlas.</p>
+          <p className="p">Create an account to sync progress, sessions, and saved segments.</p>
           <div className="split" />
           <form onSubmit={onSubmit}>
             <div><div className="label">Email</div><input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></div>

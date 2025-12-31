@@ -107,7 +107,7 @@ export function YouTubePlayer({
           },
           onError: () => {
             setState("error");
-            setErrorMsg("Video failed to load. Try opening it in YouTube.");
+            setErrorMsg("Video failed to load.");
           },
           onStateChange: (e: any) => {
             if (e.data === 1) { setState("playing"); playingRef.current = true; }
@@ -205,7 +205,6 @@ export function YouTubePlayer({
             <p className="overlayText">{errorMsg || "Unknown error."}</p>
             <div className="btnRow" style={{ marginTop: 10 }}>
               <button className="btn btnPrimary" onClick={async () => { setStarted(true); await initPlayer(); }}>Retry</button>
-              <a className="btn" href={`https://www.youtube.com/watch?v=${videoId}`} target="_blank" rel="noreferrer">Open on YouTube</a>
             </div>
           </motion.div>
         </div>

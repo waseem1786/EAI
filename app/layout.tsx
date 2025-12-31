@@ -30,8 +30,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div className="container">{children}</div>
           <div className="footer">
             <div className="footerInner">
-              <span>AI Learning Tracker</span>
-              <span>Plain CSS · MongoDB Atlas · Auto Resume</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span style={{ fontWeight: 800, color: "rgba(11,18,32,.78)" }}>AI Learning Tracker</span>
+                <span>Plan lessons, watch with auto-resume, and review sessions over time.</span>
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <Link className="navLink" href="/">Dashboard</Link>
+                <Link className="navLink" href="/tasks">Tasks</Link>
+                <Link className="navLink" href="/timeline">Timeline</Link>
+              </div>
             </div>
           </div>
         </AuthProvider>

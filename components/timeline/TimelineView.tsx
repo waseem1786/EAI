@@ -165,7 +165,7 @@ export function TimelineView(){
       <div className="card">
         <div className="cardInner">
           <h1 className="h1">Timeline</h1>
-          <p className="p">Please log in to view your timeline.</p>
+          <p className="p">Sign in to view your learning sessions, watch history, and saved segments.</p>
         </div>
       </div>
     );
@@ -180,7 +180,7 @@ export function TimelineView(){
             <h1 className="h1">Timeline</h1>
             <button className="btn btnGhost" onClick={async ()=>{ try{ await fetch("/api/events",{method:"DELETE"}); const j=await fetchJson<{events:EventItem[]}>("/api/events?limit=500"); setEvents(j.events||[]); setToast("Timeline cleared"); }catch(e:any){ setToast(e?.message||"Failed to clear"); } }}>Clear</button>
           </div>
-          <p className="p">Graphical segments per lesson + expandable tree view grouped by Date → Video → Session → Events.</p>
+          <p className="p">Review your learning sessions by day and lesson. Click segments to jump back into Tasks.</p>
         </div>
       </motion.div>
 
