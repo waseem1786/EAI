@@ -22,9 +22,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 </div>
               </div>
               <nav className="nav" aria-label="Primary">
-                <Link className="navLink" href="/">Dashboard</Link>
-                <Link className="navLink" href="/tasks">Tasks</Link>
-                <Link className="navLink" href="/timeline">Timeline</Link>
                 <NavUser />
               </nav>
             </div>
