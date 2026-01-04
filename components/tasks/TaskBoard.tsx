@@ -1,5 +1,6 @@
 "use client";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { TaskGridItem } from "./TaskGridItem";
 import { TaskGanttItem } from "./TaskGanttItem";
 import { KanbanBoard } from "./KanbanBoard";
@@ -11,7 +12,7 @@ import { type Task } from "../../lib/tasks";
 import { PlayerState } from "../video/YouTubePlayer";
 import { Toast } from "../ui/Toast";
 import { useAuth } from "../auth/AuthContext";
-import { loadLocalProgress, saveLocalProgress } from "../../lib/local_fallback";
+import { loadLocalProgress, saveLocalProgress, loadLocalStatus, saveLocalStatus } from "../../lib/local_fallback";
 import { LayoutDashboard, LayoutGrid, BarChart3 } from 'lucide-react';
 
 type Segment = { start: number; end: number };
@@ -37,6 +38,9 @@ async function apiJson<T>(url: string, init?: RequestInit): Promise<{ ok: boolea
 }
 
 export function TaskBoard({ initialTaskId, initialStatus, initialSeekSeconds }: { initialTaskId?: string; initialStatus?: string; initialSeekSeconds?: number }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [toast, setToast] = useState<string | null>(null);
   const initialFilter: "all" | "todo" | "in-progress" | "done" = initialStatus === "todo" ? "todo" : initialStatus === "doing" ? "in-progress" : initialStatus === "done" ? "done" : "all";
@@ -111,6 +115,11 @@ export function TaskBoard({ initialTaskId, initialStatus, initialSeekSeconds }: 
     const task = tasks.find((t) => t.id === taskId)!;
     await loadProgress(task.videoId);
     setPlayingTaskId(taskId);
+    
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("taskId", taskId);
+    router.push(`${pathname}?${params.toString()}`);
+
     await postEvent(task, "play_opened");
   };
 
@@ -182,7 +191,17 @@ export function TaskBoard({ initialTaskId, initialStatus, initialSeekSeconds }: 
       setIsLoading(true);
       const res = await apiJson<{ tasks: Task[] }>("/api/tasks");
       if (res.ok && res.data?.tasks) {
-        const fetchedTasks = res.data.tasks;
+        let fetchedTasks = res.data.tasks;
+        
+        // Merge local status if not logged in or if we want to support offline-first/local overrides
+        if (!user) {
+          const localStatus = loadLocalStatus();
+          fetchedTasks = fetchedTasks.map(t => ({
+            ...t,
+            status: localStatus[t.id] || t.status
+          }));
+        }
+
         setTasks(fetchedTasks);
         const map: Record<string, Progress> = {};
         for (const t of fetchedTasks) {
@@ -206,7 +225,11 @@ export function TaskBoard({ initialTaskId, initialStatus, initialSeekSeconds }: 
     task.status = destination.droppableId;
     setTasks(newTasks);
 
-    await apiJson(`/api/task-status`, { method: "POST", body: JSON.stringify({ taskId: draggableId, status: destination.droppableId }) });
+    if (!user) {
+      saveLocalStatus(draggableId, destination.droppableId);
+    } else {
+      await apiJson(`/api/task-status`, { method: "POST", body: JSON.stringify({ taskId: draggableId, status: destination.droppableId }) });
+    }
   };
 
   return (
@@ -299,6 +322,10 @@ export function TaskBoard({ initialTaskId, initialStatus, initialSeekSeconds }: 
               await closeSegmentIfOpen(playingTask, endAt);
             }
             setPlayingTaskId(null);
+            
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete("taskId");
+            router.push(`${pathname}?${params.toString()}`);
           }}
           onTick={onTick}
           onState={onPlayerState}

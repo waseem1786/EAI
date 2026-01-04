@@ -43,3 +43,23 @@ export function saveLocalProgress(videoId: string, patch: Partial<LocalProgress>
 
   return next;
 }
+
+const STATUS_KEY = "alt_status_v1";
+
+export function loadLocalStatus(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(STATUS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+export function saveLocalStatus(taskId: string, status: string): Record<string, string> {
+  const all = loadLocalStatus();
+  all[taskId] = status;
+  try {
+    localStorage.setItem(STATUS_KEY, JSON.stringify(all));
+  } catch {}
+  return all;
+}

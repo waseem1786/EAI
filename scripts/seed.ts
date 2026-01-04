@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
+dotenv.config(); // Fallback to .env
 import { dbConnect } from "../lib/db";
 import { Task } from "../models/Task";
 import TASKS from "./tasks.json";
