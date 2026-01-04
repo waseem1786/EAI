@@ -19,7 +19,17 @@ export function TaskCard({ task, onPlay, progress }: { task: TaskWithProgress; o
           <p className="taskTitle">{task.title}</p>
           <div className="taskMeta">Day {task.day} · {task.estimatedMinutes} min · {task.id}</div>
         </div>
-        <span className="badge">{task.status}</span>
+        <span
+          className="badge"
+          style={{
+            borderColor: task.status === "done" ? "rgba(34,197,94,.35)" : task.status === "doing" ? "rgba(59,130,246,.35)" : "var(--border)",
+            background: task.status === "done" ? "rgba(34,197,94,.12)" : task.status === "doing" ? "rgba(59,130,246,.10)" : "rgba(255,255,255,.92)",
+            color: task.status === "done" ? "#166534" : task.status === "doing" ? "#1d4ed8" : "rgba(15,23,42,.82)",
+            fontWeight: 600
+          }}
+        >
+          {task.status}
+        </span>
       </div>
       <div className="taskDesc">{task.description}</div>
       <div className="split" />
